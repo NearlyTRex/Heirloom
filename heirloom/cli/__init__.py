@@ -64,8 +64,9 @@ class HeirloomManager:
                 record = read_game_record(self.config['db'], name=each_game['game_name'])
                 if not record:
                     self.console.print(f':warning: Unable to read game record for game name [blue]{each_game["game_name"]}[/blue]!')
-            each_game['install_dir'] = record.get('install_dir', 'Not Installed')
-            each_game['executable'] = record.get('executable', 'Not Installed')
+            if record:
+                each_game['install_dir'] = record.get('install_dir', 'Not Installed')
+                each_game['executable'] = record.get('executable', 'Not Installed')
         self.heirloom.games = games
 
 
@@ -144,7 +145,7 @@ class HeirloomManager:
                 "uuid": g['installer_uuid'],
                 "description": g['game_description']
             }
-            games_list.append(game_data)
+            games_list.append(g)
         if json_output:
             print(json.dumps(games_list, indent=4))
         else:
@@ -153,7 +154,7 @@ class HeirloomManager:
             table.add_column("UUID", justify="center", style="green")
             table.add_column('Description', justify="left", style="white bold")
             for game in games_list:
-                table.add_row(game['game_name'], game['uuid'], game['description'])
+                table.add_row(game['game_name'], game['installer_uuid'], game['game_description'])
             self.console.print(table)
 
 
@@ -232,7 +233,7 @@ class HeirloomManager:
             game = self.heirloom.get_game_from_uuid(uuid)
         if not game:
             game = self.select_from_games_list()
-        self.console.print(self.heirloom.dump_game_data(game))
+        print(json.dumps(self.heirloom.dump_game_data(game), indent=4))
 
 
     def uninstall(
