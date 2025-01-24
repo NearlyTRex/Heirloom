@@ -177,6 +177,7 @@ class HeirloomManager:
 
     def install_game(
         self,
+        quiet: Annotated[bool, typer.Option('--quiet', help="Run without extra output")] = False,
         game: Annotated[str, typer.Option(help='Game name to install, will be prompted if not provided')] = None,
         uuid: Annotated[str, typer.Option(help='UUID of game to install, will be prompted for game name if not provided')] = None,
         install_method: Annotated[InstallationMethod, typer.Option(case_sensitive=False)] = None):
