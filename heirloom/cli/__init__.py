@@ -1,4 +1,5 @@
 import atexit
+import json
 import os
 import shutil
 import subprocess
@@ -134,16 +135,50 @@ def merge_game_data_with_db():
         each_game['executable'] = record.get('executable', NOT_INSTALLED) if record else NOT_INSTALLED
 
 
+@app.command('login')
+def login(quiet: Annotated[bool, typer.Option('--quiet', help='Suppress decorative output (for scripting)')] = False):
+    """
+    Log in to Legacy Games.
+    """
+    console.quiet = quiet
+    get_context(refresh=False)
+
+
+@app.command('refresh')
+def refresh(quiet: Annotated[bool, typer.Option('--quiet', help='Suppress decorative output (for scripting)')] = False):
+    """
+    Refresh your Legacy Games library.
+    """
+    console.quiet = quiet
+    get_context(refresh=True)
+
+
 @app.command('list')
 def list_games(installed: Annotated[bool, typer.Option('--installed', help='Only list installed games')] = False,
-               not_installed: Annotated[bool, typer.Option('--not-installed', help='Only list games that are NOT installed')] = False):
+               not_installed: Annotated[bool, typer.Option('--not-installed', help='Only list games that are NOT installed')] = False,
+               json_output: Annotated[bool, typer.Option('--json', help='Output the data as JSON')] = False,
+               quiet: Annotated[bool, typer.Option('--quiet', help='Suppress decorative output (for scripting)')] = False):
     """
     Lists games in your Legacy Games library.
     """
+    console.quiet = quiet
     get_context()
     if installed and not_installed:
         installed = False
         not_installed = False
+
+    games = []
+    for game_record in heirloom.games:
+        is_installed = game_record.get('install_dir') != NOT_INSTALLED
+        if installed and not is_installed:
+            continue
+        if not_installed and is_installed:
+            continue
+        games.append(game_record)
+
+    if json_output:
+        print(json.dumps(games, indent=4))
+        return
 
     table = rich.table.Table(title='Legacy Games', box=rich.box.ROUNDED, show_lines=True)
     table.add_column('Game Name', justify='left', style='yellow')
@@ -151,12 +186,8 @@ def list_games(installed: Annotated[bool, typer.Option('--installed', help='Only
     table.add_column('Installed?', justify='center')
     table.add_column('Description', justify='left', style='white bold')
 
-    for game_record in heirloom.games:
+    for game_record in games:
         is_installed = game_record.get('install_dir') != NOT_INSTALLED
-        if installed and not is_installed:
-            continue
-        if not_installed and is_installed:
-            continue
         table.add_row(
             game_record['game_name'],
             game_record['installer_uuid'],
@@ -231,16 +262,18 @@ def install(game: Annotated[str, typer.Option(help='Game name to install, will b
 
 @app.command('info')
 def info(game: Annotated[str, typer.Option(help='Game name to inspect, will be prompted if not provided')] = None,
-         uuid: Annotated[str, typer.Option(help='UUID of game to inspect, will be prompted for game name if not provided')] = None):
+         uuid: Annotated[str, typer.Option(help='UUID of game to inspect, will be prompted for game name if not provided')] = None,
+         quiet: Annotated[bool, typer.Option('--quiet', help='Suppress decorative output (for scripting)')] = False):
     """
     Prints a JSON blob representing a game from the Legacy Games API.
     """
+    console.quiet = quiet
     get_context()
     if uuid:
         game = heirloom.get_game_from_uuid(uuid)
     if not game:
         game = select_from_games_list()
-    console.print(heirloom.dump_game_data(game))
+    print(json.dumps(heirloom.dump_game_data(game), indent=4))
 
 
 @app.command('uninstall')
